@@ -52,6 +52,7 @@ function createTrackElements(tracks) {
             trackElem.autoplay = true;
             trackElem.muted = true;
             trackElem.loop = true;
+            trackElem.playsInline = true;
 
             container.onmouseenter = (event) => {
                 const aspect = trackElem.videoWidth / trackElem.videoHeight;
