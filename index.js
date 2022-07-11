@@ -36,11 +36,6 @@ app.get('/spotify-auth', (req, res) => {
   // Create state string for validation
   state = uniqid('flow-spotify-');
 
-  const refreshToken = req.query.refresh_token;
-  if (refreshToken) {
-    res.redirect('/spotify-reauth?' + stringify(req.query));
-  }
-
   var scope = 'user-read-recently-played';
 
   //redirect to spotify login with desired scope
@@ -128,16 +123,16 @@ app.get('/spotify-reauth', (req, res) => {
 });
 
 app.get('/', (req, res) => {
+  res.redirect('/me?' + stringify(req.query));
+});
+
+app.get('/me', (req, res) => {
   const accessToken = req.query.access_token;
   if (!accessToken) {
     res.redirect('/spotify-auth?' + stringify(req.query));
     return;
   }
 
-  res.redirect('/me?' + stringify(req.query));
-});
-
-app.get('/me', (req, res) => {
   res.sendFile(getAbsolutePath('public/html/index.html'));
 });
 

@@ -1,7 +1,6 @@
 import Cookie from './cookie.js';
 
-var accessToken = Cookie.get('access_token');
-var refreshToken = Cookie.get('refresh_token');
+var accessToken;
 checkTokens();
 
 var tracksList = document.querySelector("#track-container");
@@ -16,12 +15,8 @@ function checkTokens() {
     if (!accessToken || !refreshToken) {
         let params = new URLSearchParams(document.location.search);
         accessToken = params.get('access_token');
-        refreshToken = params.get('refresh_token');
 
-        if (accessToken && refreshToken) {
-            Cookie.set('access_token', accessToken);
-            Cookie.set('refresh_token', refreshToken);
-        } else {
+        if (!accessToken) {
             window.location.replace('/');
         }
     }
