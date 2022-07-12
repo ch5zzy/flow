@@ -10,6 +10,35 @@ var audio = new Audio();
 // Fetch the user's recent tracks.
 fetchTracks(createTrackElements);
 
+// Attack event listeners for drag handling.
+var mouseDown = false;
+var didScroll = false;
+var startX, scrollLeft;
+var startDragging = function (event) {
+    mouseDown = true;
+    startX = event.pageX - tracksList.offsetLeft;
+    scrollLeft = tracksList.scrollLeft;
+    didScroll = false;
+};
+var stopDragging = function (event) {
+    mouseDown = false;
+};
+tracksList.addEventListener('mousemove', (event) => {
+    event.preventDefault();
+
+    if (!mouseDown) {
+        return;
+    }
+
+    didScroll = true;
+    const x = event.pageX - tracksList.offsetLeft;
+    const scroll = x - startX;
+    tracksList.scrollLeft = scrollLeft - scroll;
+});
+tracksList.addEventListener('mousedown', startDragging, false);
+tracksList.addEventListener('mouseup', stopDragging, false);
+tracksList.addEventListener('mouseleave', stopDragging, false);
+
 /**
  * Checks validity of access tokens.
  */
@@ -37,11 +66,12 @@ async function fetchTracks(callback) {
         .then((response) => {
             if (response && response.status == 200) {
                 response.json().then((tracks) => {
+                    // If there was an error, reauthenticate.
                     if (tracks.error) {
                         window.location.replace('/');
                     }
 
-                    callback(tracks)
+                    callback(tracks);
                 });
             }
         });
@@ -61,8 +91,11 @@ function createTrackElements(tracks) {
         // Create a container for holding the track art.
         const trackElem = document.createElement('div');
         trackElem.classList.add('track');
+        trackElem.setAttribute('aria-label', `"${track.name}" by ${track.artists.join(', ')}`);
+        trackElem.setAttribute('tabindex', 0);
 
         let trackVis;
+        let mouseEnter;
         if (canvasUrl) {
             // Canvas is available, so track art will be a video.
             trackVis = document.createElement('video');
@@ -71,37 +104,59 @@ function createTrackElements(tracks) {
             trackVis.muted = true;
             trackVis.loop = true;
             trackVis.playsInline = true;
+            trackVis.setAttribute('tabindex', -1);
 
-            // Expand the track when hovered.
-            trackElem.onmouseenter = (event) => {
+            mouseEnter = () => {
                 const aspect = trackVis.videoWidth / trackVis.videoHeight;
                 const newWidth = window.innerHeight * aspect;
                 trackElem.style.flex = '0 0 ' + newWidth + 'px';
-            }
+            };
         } else {
             // No canvas, so track art will be an image.
             trackVis = document.createElement('img');
             trackVis.src = track.art;
+            trackVis.draggable = false;
+            trackVis.setAttribute('tabindex', -1);
             
-            // Expand the track when hovered.
-            trackElem.onmouseenter = (event) => {
+            mouseEnter = () => {
                 const aspect = trackVis.naturalWidth / trackVis.naturalHeight;
                 const newWidth = window.innerHeight * aspect;
                 trackElem.style.flex = '0 0 ' + newWidth + 'px';
             }
         }
 
+        // Expand the track when hovered.
+        trackElem.onmouseenter = (event) => {
+            mouseEnter();
+        }
+        trackElem.addEventListener('focus', (event) => {
+            event.preventDefault();
+            trackElem.onmouseenter(event);
+        });
+
         // Close the track when not hovered.
         trackElem.onmouseleave = (event) => {
-            trackElem.style.flex = '0 0 100px';
+            trackElem.style.flex = '0 0 var(--initial-track-width)';
         }
+        trackElem.addEventListener('blur', (event) => {
+            event.preventDefault();
+            trackElem.onmouseleave(event);
+        });
 
         // Play the track sample when clicked.
         trackElem.onclick = (event) => {
-            audio.pause();
-            audio.src = track.preview_url;
-            audio.play();
+            if (!didScroll) {
+                audio.pause();
+                audio.src = track.preview_url;
+                audio.play();
+            }
         };
+        trackElem.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                trackElem.click();
+            }
+        });
 
         trackElem.append(trackVis);
         tracksList.append(trackElem);

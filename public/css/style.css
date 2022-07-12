@@ -1,6 +1,10 @@
 /*Import font*/
 @import url('https://fonts.googleapis.com/css2?family=Major+Mono+Display&display=swap');
 
+:root {
+    --initial-track-width: 88px;
+}
+
 /*General*/
 * {
     font-family: "Major Mono Display", sans-serif;
@@ -33,13 +37,17 @@ body {
 
 /* Track */
 .track {
-    flex: 0 0 100px;
+    flex: 0 0 var(--initial-track-width);
     height: 100%;
     transition: flex 1s ease;
     cursor: pointer;
+    box-sizing: border-box;
 }
 .track img, .track video {
     width: 100%;
     height: 100%;
     object-fit: cover;
+}
+.track:focus {
+    border: 10px solid white;
 }
