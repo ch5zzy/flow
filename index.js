@@ -70,6 +70,7 @@ app.get('/spotify-callback', (req, res) => {
       stringify({
         error: 'state_mismatch',
       }));
+    return;
   }
 
   var body = {
