@@ -26,7 +26,7 @@ export default async function getCanvases(tracks) {
     // Build canvas mapping.
     let canvasMap = new Map();
     for (const track of canvasResponse.canvasesList) {
-      if (track.trackUri && track.canvasUrl) {
+      if (track.trackUri && track.canvasUrl && track.canvasUrl.endsWith('.mp4')) {
         canvasMap.set(track.trackUri, track.canvasUrl);
       }
     }

@@ -1,6 +1,6 @@
 import Cookie from './cookie.js';
 
-var accessToken;
+var refreshToken = Cookie.get('refresh_token');
 checkTokens();
 
 var tracksList = document.querySelector("#track-container");
@@ -12,12 +12,15 @@ fetchTracks(createTrackElements);
  * Checks validity of access tokens.
  */
 function checkTokens() {
-    if (!accessToken || !refreshToken) {
-        let params = new URLSearchParams(document.location.search);
-        accessToken = params.get('access_token');
+    let params = new URLSearchParams(document.location.search);
+    if (!refreshToken || params.get('refresh_token')) {
+        refreshToken = params.get('refresh_token');
 
-        if (!accessToken) {
+        if (!refreshToken) {
             window.location.replace('/');
+        } else {
+            Cookie.set('refresh_token', refreshToken);
+            window.location.replace('/me');
         }
     }
 }
@@ -28,11 +31,16 @@ function checkTokens() {
  * @param {function} callback
  */
 async function fetchTracks(callback) {
-    console.log(callback);
-    fetch('/recent-tracks?access_token=' + accessToken)
+    fetch('/recent-tracks?refresh_token=' + refreshToken)
         .then((response) => {
             if (response && response.status == 200) {
-                response.json().then((tracks) => callback(tracks));
+                response.json().then((tracks) => {
+                    if (tracks.error) {
+                        window.location.replace('/');
+                    }
+
+                    callback(tracks)
+                });
             }
         });
 }
