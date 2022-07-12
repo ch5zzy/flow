@@ -32,6 +32,9 @@ function getAbsolutePath(file) {
   return path.join(path.resolve(), file);
 }
 
+/**
+ * Authorize app for use with Spotify account.
+ */
 app.get('/spotify-auth', (req, res) => {
   // Create state string for validation
   state = uniqid('flow-spotify-');
@@ -54,6 +57,9 @@ app.get('/spotify-auth', (req, res) => {
     }));
 });
 
+/**
+ * Spotify callback.
+ */
 app.get('/spotify-callback', (req, res) => {
   var code = req.query.code || null;
   var reqState = req.query.state || null;
@@ -95,6 +101,9 @@ app.get('/spotify-callback', (req, res) => {
     .catch((error) => console.log(error));
 });
 
+/**
+ * Checks if refresh token is available and if not, requests authorization.
+ */
 app.get('/', (req, res) => {
   if (!req.query.refresh_token) {
     res.redirect('/spotify-auth');
@@ -104,10 +113,16 @@ app.get('/', (req, res) => {
   res.redirect('/me?' + stringify(req.query));
 });
 
+/**
+ * Displays the user's recent tracks.
+ */
 app.get('/me', (req, res) => {
   res.sendFile(getAbsolutePath('public/html/index.html'));
 });
 
+/**
+ * Gets a user's recent tracks.
+ */
 app.get('/recent-tracks', (req, res) => {
   const refreshToken = req.query.refresh_token;
   if (!refreshToken) {
@@ -117,6 +132,7 @@ app.get('/recent-tracks', (req, res) => {
 
   getAccessToken(refreshToken).then((accessToken) => {
     getRecentlyPlayed(accessToken).then((recentTracks) => {
+      // If there is an error getting the tracks, send an error to client.
       if (!recentTracks) {
         res.send({
           error: -1,
@@ -140,8 +156,14 @@ app.get('/recent-tracks', (req, res) => {
         });
     });
   });
-})
+});
 
+/**
+ * Gets a new access token using a refresh token.
+ * 
+ * @param {string} refreshToken 
+ * @returns {string}
+ */
 function getAccessToken(refreshToken) {
   const ACCESS_TOKEN_URL = 'https://accounts.spotify.com/api/token';
 
@@ -170,6 +192,12 @@ function getAccessToken(refreshToken) {
     .catch(error => console.log(`ERROR ${ACCESS_TOKEN_URL}: ${error}`));
 }
 
+/**
+ * Gets a user's recently played tracks.
+ * 
+ * @param {*} accessToken 
+ * @returns 
+ */
 function getRecentlyPlayed(accessToken) {
   const RECENTLY_PLAYED_URL = 'https://api.spotify.com/v1/me/player/recently-played?limit=50';
 
