@@ -1,14 +1,27 @@
 import Cookie from './cookie.js';
+import JSONCrush from './JSONCrush.min.js';
 
-// Check if there is a refresh token stored.
-var refreshToken = Cookie.get('refresh_token');
-checkTokens();
+const appUrl = window.location.origin;
+const baseUrl = window.location.origin + window.location.pathname;
 
 // Create the track list and audio object.
 var tracksList = document.querySelector("#track-container");
 var audio = new Audio();
+
+// Attach click handler to share button.
+var shareButton = document.querySelector('#share-button');
+shareButton.onclick = shareButtonHandler;
+
+// Check if there is a refresh token stored.
+var refreshToken = Cookie.get('refresh_token');
+var recentTracks;
+var serializedTracks;
+checkTokens();
+
 // Fetch the user's recent tracks.
-fetchTracks(createTrackElements);
+if (!serializedTracks) {
+    fetchTracks(createTrackElements);
+}
 
 // Attack event listeners for drag handling.
 var mouseDown = false;
@@ -40,10 +53,51 @@ tracksList.addEventListener('mouseup', stopDragging, false);
 tracksList.addEventListener('mouseleave', stopDragging, false);
 
 /**
+ * Handles clicks for the share button.
+ */
+function shareButtonHandler() {
+    serializedTracks = encodeURIComponent(JSONCrush.crush(JSON.stringify(recentTracks)));
+
+    fetch('/display-name?refresh_token=' + refreshToken)
+        .then((response) => {
+            if (response && response.status == 200) {
+                response.json().then((profile) => {
+                    // If there was an error, reauthenticate.
+                    if (profile.error) {
+                        window.location.replace('/');
+                    }
+
+                    const shareUrl = `${appUrl}/you?n=${profile.display_name}&t=${serializedTracks}`;
+                    writeToClipboard(shareUrl, () => {
+                        shareButton.innerHTML = 'copied to clipboard!'
+                        setInterval(() => {
+                            shareButton.innerHTML = 'share my flow';
+                        }, 5000);
+                    }, () => {
+                        shareButton.innerHTML = 'oops! couldn\'t copy url :(';
+                        setInterval(() => {
+                            shareButton.innerHTML = 'share my flow';
+                        }, 5000);
+                    });
+                });
+            }
+        });
+}
+
+/**
  * Checks validity of access tokens.
  */
 function checkTokens() {
     let params = new URLSearchParams(document.location.search);
+
+    // Check if there are serialized tracks in the URL.
+    serializedTracks = params.get('t');
+    if (serializedTracks) {
+        disableShareButton((params.get('n') ?? 'someone') + '\'s flow');
+        createTrackElements(JSON.parse(JSONCrush.uncrush(serializedTracks)));
+        return;
+    }
+
     const newRefreshToken = params.get('refresh_token');
     if (!refreshToken || newRefreshToken) {
         refreshToken = newRefreshToken;
@@ -71,6 +125,7 @@ async function fetchTracks(callback) {
                         window.location.replace('/');
                     }
 
+                    recentTracks = tracks;
                     callback(tracks);
                 });
             }
@@ -87,7 +142,7 @@ function createTrackElements(tracks) {
         // Get the track canvas and artwork.
         const canvasUrl = track.canvas_url;
         const trackArt = track.art;
-        
+
         // Create a container for holding the track art.
         const trackElem = document.createElement('div');
         trackElem.classList.add('track');
@@ -117,7 +172,7 @@ function createTrackElements(tracks) {
             trackVis.src = track.art;
             trackVis.draggable = false;
             trackVis.setAttribute('tabindex', -1);
-            
+
             mouseEnter = () => {
                 const aspect = trackVis.naturalWidth / trackVis.naturalHeight;
                 const newWidth = window.innerHeight * aspect;
@@ -161,4 +216,26 @@ function createTrackElements(tracks) {
         trackElem.append(trackVis);
         tracksList.append(trackElem);
     }
+}
+
+/**
+ * Writes some text to the clipboard.
+ * 
+ * @param {string} text 
+ * @param {function} onSuccess 
+ * @param {function} onFailure 
+ */
+function writeToClipboard(text, onSuccess, onFailure) {
+    navigator.clipboard.writeText(text).then(onSuccess, onFailure);
+}
+
+/**
+ * Disables the share button and replaces the text with given value.
+ * 
+ * @param {string} newText
+ */
+function disableShareButton(newText) {
+    shareButton.onclick = () => { };
+    shareButton.classList.add('shareDisabled');
+    shareButton.innerHTML = newText;
 }

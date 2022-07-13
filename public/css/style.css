@@ -1,9 +1,8 @@
-/*Import font*/
-@import url('https://fonts.googleapis.com/css2?family=Major+Mono+Display&display=swap');
-
 :root {
     --initial-track-width: 88px;
     --focus-border: 10px solid white;
+    --share-button-margin: 10px;
+    --share-button-border: 3px;
 }
 
 /*General*/
@@ -48,4 +47,32 @@ body {
     width: 100%;
     height: 100%;
     object-fit: cover;
+}
+
+/* Share button */
+button {
+    position: absolute;
+    right: var(--share-button-margin);
+    bottom: var(--share-button-margin);
+    appearance: none;
+    font: sans-serif;
+    background: black;
+    color: white;
+    border: none;
+    border-radius: 0;
+    padding: 10px;
+    cursor: pointer;
+}
+button:hover, button:focus {
+    right: calc(var(--share-button-margin) - var(--share-button-border));
+    bottom: calc(var(--share-button-margin) - var(--share-button-border));
+    border: var(--share-button-border) solid white;
+}
+button.shareDisabled {
+    cursor: default;
+}
+button.shareDisabled:hover, button.shareDisabled:focus {
+    right: var(--share-button-margin);
+    bottom: var(--share-button-margin);
+    border: none;
 }

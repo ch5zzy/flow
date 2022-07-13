@@ -122,6 +122,18 @@ app.get('/me', (req, res) => {
 });
 
 /**
+ * Displays another user's recent tracks.
+ */
+app.get('/you', (req, res) => {
+  if (!req.query.t) {
+    res.redirect('/');
+    return;
+  }
+
+  res.sendFile(getAbsolutePath('public/html/index.html'));
+});
+
+/**
  * Gets a user's recent tracks.
  */
 app.get('/recent-tracks', (req, res) => {
@@ -156,6 +168,32 @@ app.get('/recent-tracks', (req, res) => {
           }));
         });
     });
+  });
+});
+
+/**
+ * Gets a user's display name.
+ */
+app.get('/display-name', (req, res) => {
+  const refreshToken = req.query.refresh_token;
+  if (!refreshToken) {
+    res.send({});
+    return;
+  }
+
+  getAccessToken(refreshToken).then((accessToken) => {
+    getUserProfile(accessToken).then((profile) => {
+      if (!profile) {
+        res.send({
+          error: -1,
+        });
+        return;
+      }
+
+      res.send({
+        display_name: profile.display_name,
+      });
+    })
   });
 });
 
@@ -197,7 +235,7 @@ function getAccessToken(refreshToken) {
  * Gets a user's recently played tracks.
  * 
  * @param {*} accessToken 
- * @returns 
+ * @returns {object}
  */
 function getRecentlyPlayed(accessToken) {
   const RECENTLY_PLAYED_URL = 'https://api.spotify.com/v1/me/player/recently-played?limit=50';
@@ -220,6 +258,35 @@ function getRecentlyPlayed(accessToken) {
       }
     })
     .catch((error) => console.log(`ERROR ${RECENTLY_PLAYED_URL}: ${error}`));
+}
+
+/**
+ * Gets a user's profile.
+ * 
+ * @param {*} accessToken 
+ * @returns {object}
+ */
+function getUserProfile(accessToken) {
+  const USER_PROFILE_URL = 'https://api.spotify.com/v1/me';
+
+  const options = {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  };
+
+  return axios.get(USER_PROFILE_URL, options)
+    .then((response) => {
+      if (response.statusText !== 'OK') {
+        console.log(`ERROR ${USER_PROFILE_URL}: ${response.status} ${response.statusText}`);
+        if (response.data.error) {
+          console.log(response.data.error);
+        }
+      } else {
+        return response.data;
+      }
+    })
+    .catch((error) => console.log(`ERROR ${USER_PROFILE_URL}: ${error}`));
 }
 
 app.use(express.static('public'));
