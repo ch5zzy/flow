@@ -3,6 +3,7 @@ import express from 'express';
 import fetch from 'node-fetch';
 import uniqid from 'uniqid';
 import path from 'path';
+import tinyUrl from 'tinyurl';
 import getCanvases from './api/canvas/canvases.js';
 
 var clientId = process.env.SPOTIFY_CLIENT_ID;
@@ -143,7 +144,7 @@ app.get('/recent-tracks', (req, res) => {
     return;
   }
 
-  getAccessToken(refreshToken).then((accessToken) => {
+  getPersonalToken(refreshToken).then((accessToken) => {
     getRecentlyPlayed(accessToken).then((recentTracks) => {
       // If there is an error getting the tracks, send an error to client.
       if (!recentTracks) {
@@ -164,6 +165,45 @@ app.get('/recent-tracks', (req, res) => {
               preview_url: track.preview_url,
               canvas_url: track.canvas_url,
               link: track.external_urls.spotify,
+              id: track.id,
+            };
+          }));
+        });
+    });
+  });
+});
+
+/**
+ * Gets tracks for the given IDs.
+ */
+app.get('/get-tracks', (req, res) => {
+  const trackIds = req.query.ids;
+  if (!trackIds) {
+    res.send({});
+    return;
+  }
+
+  getAccessToken().then((accessToken) => {
+    getTracks(JSON.parse(trackIds), accessToken).then((bareTracks) => {
+      if (!bareTracks) {
+        res.send({
+          error: -1,
+        });
+        return;
+      }
+
+      getCanvases(bareTracks)
+        .then((tracks) => {
+          res.send(tracks.map((track) => {
+            return {
+              name: track.name,
+              album: track.album.name,
+              artists: track.artists.map((artist) => artist.name),
+              art: track.album.images[0].url,
+              preview_url: track.preview_url,
+              canvas_url: track.canvas_url,
+              link: track.external_urls.spotify,
+              id: track.id,
             };
           }));
         });
@@ -181,7 +221,7 @@ app.get('/display-name', (req, res) => {
     return;
   }
 
-  getAccessToken(refreshToken).then((accessToken) => {
+  getPersonalToken(refreshToken).then((accessToken) => {
     getUserProfile(accessToken).then((profile) => {
       if (!profile) {
         res.send({
@@ -198,17 +238,69 @@ app.get('/display-name', (req, res) => {
 });
 
 /**
- * Gets a new access token using a refresh token.
+ * Shortens a URL.
+ */
+app.get('/shorten', (req, res) => {
+  const longUrl = req.query.url;
+  if (!longUrl) {
+    res.send({});
+    return;
+  }
+
+  tinyUrl.shorten(longUrl, (shortUrl, error) => {
+    if (error) {
+      console.log(error);
+      return;
+    }
+
+    res.send({
+      short_url: shortUrl,
+    });
+  });
+})
+
+/**
+ * Gets a new personal token using a refresh token.
  * 
  * @param {string} refreshToken 
  * @returns {string}
  */
-function getAccessToken(refreshToken) {
-  const ACCESS_TOKEN_URL = 'https://accounts.spotify.com/api/token';
+function getPersonalToken(refreshToken) {
+  const PERSONAL_TOKEN_URL = 'https://accounts.spotify.com/api/token';
 
   const body = {
     grant_type: 'refresh_token',
     refresh_token: refreshToken,
+  }
+  const options = {
+    headers: {
+      'Authorization': 'Basic ' + Buffer.from(clientId + ':' + clientSecret).toString('base64'),
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+  }
+
+  return axios.post(PERSONAL_TOKEN_URL, stringify(body), options)
+    .then(response => {
+      if (response.statusText !== 'OK') {
+        console.log(`ERROR ${PERSONAL_TOKEN_URL}: ${response.status} ${response.statusText}`);
+        if (response.data.error) {
+          console.log(response.data.error);
+        }
+      } else {
+        return response.data.access_token;
+      }
+    })
+    .catch(error => console.log(`ERROR ${PERSONAL_TOKEN_URL}: ${error}`));
+}
+
+/**
+ * Gets a new access token.
+ */
+function getAccessToken() {
+  const ACCESS_TOKEN_URL = 'https://accounts.spotify.com/api/token';
+
+  const body = {
+    grant_type: 'client_credentials',
   }
   const options = {
     headers: {
@@ -228,7 +320,7 @@ function getAccessToken(refreshToken) {
         return response.data.access_token;
       }
     })
-    .catch(error => console.log(`ERROR ${ACCESS_TOKEN_URL}: ${error}`));
+    .catch(error => console.log(`ERROR ${PERSONAL_TOKEN_URL}: ${error}`));
 }
 
 /**
@@ -258,6 +350,34 @@ function getRecentlyPlayed(accessToken) {
       }
     })
     .catch((error) => console.log(`ERROR ${RECENTLY_PLAYED_URL}: ${error}`));
+}
+
+/**
+ * @param {Array<string>} trackIds 
+ * @param {string} accessToken
+ * @returns 
+ */
+function getTracks(trackIds, accessToken) {
+  const TRACKS_URL = 'https://api.spotify.com/v1/tracks?market=US&ids=' + trackIds.join(',');
+
+  const options = {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  };
+
+  return axios.get(TRACKS_URL, options)
+    .then((response) => {
+      if (response.statusText !== 'OK') {
+        console.log(`ERROR ${TRACKS_URL}: ${response.status} ${response.statusText}`);
+        if (response.data.error) {
+          console.log(response.data.error);
+        }
+      } else {
+        return response.data.tracks;
+      }
+    })
+    .catch((error) => console.log(`ERROR ${TRACKS_URL}: ${error}`));
 }
 
 /**

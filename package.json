@@ -6,6 +6,7 @@
     "google-protobuf": "^3.20.1",
     "node-fetch": "^3.2.6",
     "path": "^0.12.7",
+    "tinyurl": "^1.1.7",
     "uniqid": "^5.4.0"
   }
 }

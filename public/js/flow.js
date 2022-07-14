@@ -1,5 +1,4 @@
 import Cookie from './cookie.js';
-import JSONCrush from './JSONCrush.min.js';
 
 const appUrl = window.location.origin;
 const baseUrl = window.location.origin + window.location.pathname;
@@ -14,13 +13,15 @@ shareButton.onclick = shareButtonHandler;
 
 // Check if there is a refresh token stored.
 var refreshToken = Cookie.get('refresh_token');
-var recentTracks;
+var trackIds;
 var serializedTracks;
 checkTokens();
 
 // Fetch the user's recent tracks.
 if (!serializedTracks) {
-    fetchTracks(createTrackElements);
+    fetchRecentTracks(createTrackElements);
+} else {
+    fetchTracks(trackIds, createTrackElements);
 }
 
 // Attack event listeners for drag handling.
@@ -56,7 +57,7 @@ tracksList.addEventListener('mouseleave', stopDragging, false);
  * Handles clicks for the share button.
  */
 function shareButtonHandler() {
-    serializedTracks = encodeURIComponent(JSONCrush.crush(JSON.stringify(recentTracks)));
+    serializedTracks = encodeURIComponent(JSON.stringify(trackIds));
 
     fetch('/display-name?refresh_token=' + refreshToken)
         .then((response) => {
@@ -68,17 +69,25 @@ function shareButtonHandler() {
                     }
 
                     const shareUrl = `${appUrl}/you?n=${profile.display_name}&t=${serializedTracks}`;
-                    writeToClipboard(shareUrl, () => {
-                        shareButton.innerHTML = 'copied to clipboard!'
-                        setInterval(() => {
-                            shareButton.innerHTML = 'share my flow';
-                        }, 5000);
-                    }, () => {
-                        shareButton.innerHTML = 'oops! couldn\'t copy url :(';
-                        setInterval(() => {
-                            shareButton.innerHTML = 'share my flow';
-                        }, 5000);
-                    });
+                    
+                    fetch('/shorten?url=' + encodeURIComponent(shareUrl))
+                        .then((response) => {
+                            if (response && response.status == 200) {
+                                response.json().then((short) => {
+                                    writeToClipboard(short.short_url, () => {
+                                        shareButton.innerHTML = 'copied to clipboard!'
+                                        setInterval(() => {
+                                            shareButton.innerHTML = 'share my flow';
+                                        }, 5000);
+                                    }, () => {
+                                        shareButton.innerHTML = 'oops! couldn\'t copy url :(';
+                                        setInterval(() => {
+                                            shareButton.innerHTML = 'share my flow';
+                                        }, 5000);
+                                    });
+                                });
+                            }
+                        });
                 });
             }
         });
@@ -94,7 +103,7 @@ function checkTokens() {
     serializedTracks = params.get('t');
     if (serializedTracks) {
         disableShareButton((params.get('n') ?? 'someone') + '\'s flow');
-        createTrackElements(JSON.parse(JSONCrush.uncrush(serializedTracks)));
+        trackIds = JSON.parse(serializedTracks);
         return;
     }
 
@@ -115,7 +124,7 @@ function checkTokens() {
  * 
  * @param {function} callback
  */
-async function fetchTracks(callback) {
+async function fetchRecentTracks(callback) {
     fetch('/recent-tracks?refresh_token=' + refreshToken)
         .then((response) => {
             if (response && response.status == 200) {
@@ -125,7 +134,29 @@ async function fetchTracks(callback) {
                         window.location.replace('/');
                     }
 
-                    recentTracks = tracks;
+                    trackIds = tracks.map((track) => track.id);
+                    callback(tracks);
+                });
+            }
+        });
+}
+
+/**
+ * Fetch recently played tracks.
+ * 
+ * @param {Array<string>} trackIds
+ * @param {function} callback
+ */
+async function fetchTracks(trackIds, callback) {
+    fetch('/get-tracks?ids=' + encodeURIComponent(JSON.stringify(trackIds)))
+        .then((response) => {
+            if (response && response.status == 200) {
+                response.json().then((tracks) => {
+                    // If there was an error, reauthenticate.
+                    if (tracks.error) {
+                        window.location.replace('/');
+                    }
+
                     callback(tracks);
                 });
             }
