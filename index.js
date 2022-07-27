@@ -108,7 +108,7 @@ app.get('/spotify-callback', (req, res) => {
  */
 app.get('/', (req, res) => {
   if (!req.query.refresh_token) {
-    res.redirect('/spotify-auth');
+    res.redirect('/login');
     return;
   }
 
@@ -235,6 +235,10 @@ app.get('/display-name', (req, res) => {
       });
     })
   });
+});
+
+app.get('/login', (req, res) => {
+  res.sendFile(getAbsolutePath('public/html/login.html'));
 });
 
 /**

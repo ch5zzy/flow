@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Red+Hat+Mono&display=swap');
+
 :root {
     --initial-track-width: 88px;
     --focus-border: 10px solid white;
@@ -7,7 +9,7 @@
 
 /*General*/
 * {
-    font-family: "Major Mono Display", sans-serif;
+    font-family: "Red Hat Mono", sans-serif;
     font-size: 18px;
     -webkit-appearance: none;
     border-radius: 0px;
@@ -27,12 +29,23 @@ body {
     outline: none;
 }
 
-/* Container */
+/* Containers */
 #track-container {
     display: flex;
     width: 100%;
     height: 100%;
     overflow: scroll;
+}
+
+#login-container {
+    display: flex;
+    flex-flow: column wrap;
+    justify-content: center;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
 }
 
 /* Track */
@@ -43,6 +56,7 @@ body {
     cursor: pointer;
     box-sizing: border-box;
 }
+
 .track img, .track video {
     width: 100%;
     height: 100%;
@@ -51,7 +65,7 @@ body {
 }
 
 /* Share button */
-button {
+#share-button {
     position: absolute;
     right: var(--share-button-margin);
     bottom: var(--share-button-margin);
@@ -64,16 +78,47 @@ button {
     padding: 10px;
     cursor: pointer;
 }
-button:hover, button:focus {
+
+#share-button:hover, #share-button:focus {
     right: calc(var(--share-button-margin) - var(--share-button-border));
     bottom: calc(var(--share-button-margin) - var(--share-button-border));
     border: var(--share-button-border) solid white;
 }
-button.shareDisabled {
+
+#share-button.shareDisabled {
     cursor: default;
 }
-button.shareDisabled:hover, button.shareDisabled:focus {
+
+#share-button.shareDisabled:hover, #share-button.shareDisabled:focus {
     right: var(--share-button-margin);
     bottom: var(--share-button-margin);
     border: none;
+}
+
+/* Login page */
+span#logo {
+    font-size: 500%;
+    padding: 20px;
+    color: white;
+}
+
+#login-container a {
+    text-decoration: none;
+}
+
+#login-button {
+    background-color: white;
+    color: black;
+    border: 0px;
+    padding: 10px;
+    cursor: pointer;
+}
+
+#login-button * {
+    vertical-align: middle;
+}
+
+#login-button img {
+    height: 32px;
+    padding-right: 8px;
 }

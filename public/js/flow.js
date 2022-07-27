@@ -111,7 +111,7 @@ function checkTokens() {
     if (!refreshToken || newRefreshToken) {
         refreshToken = newRefreshToken;
         if (!refreshToken) {
-            window.location.replace('/');
+            window.location.replace('/spotify-auth');
         } else {
             Cookie.set('refresh_token', refreshToken);
             window.location.replace('/me');
