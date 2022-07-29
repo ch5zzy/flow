@@ -234,7 +234,7 @@ function createTrackElements(tracks) {
             if (!didScroll) {
                 audio.pause();
                 audio.src = track.preview_url;
-                audio.play();
+                fadeAudio(audio, 3);
             }
         };
         trackElem.addEventListener('keypress', (event) => {
@@ -269,4 +269,31 @@ function disableShareButton(newText) {
     shareButton.onclick = () => { };
     shareButton.classList.add('shareDisabled');
     shareButton.innerHTML = newText;
+}
+
+function fadeAudio(audio, fadeTime) {
+    audio.volume = 1;
+    var fadeInterval = 100; /* ms */
+
+    // Set the point in playback that fadeout begins. This is for a 2 second fade out.
+    var fadePoint;
+    var fadeDecrement = fadeTime / fadeInterval;
+
+    audio.play();
+    var fadeOutAudio = setInterval(function () {
+        // Calculate fade point if it is not yet calculated.
+        if (!fadePoint) {
+            fadePoint = audio.duration - fadeTime;
+        }
+
+        // Only fade if past the fade out point or volume not at zero already.
+        if ((audio.currentTime >= fadePoint) && (audio.volume !== 0.0)) {
+            audio.volume -= fadeDecrement;
+        }
+
+        // When the volume hits zero, stop updating.
+        if (audio.volume === 0.0 || audio.paused) {
+            clearInterval(fadeOutAudio);
+        }
+    }, fadeInterval);
 }
