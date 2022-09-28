@@ -78,6 +78,7 @@ body {
     border-radius: 0;
     padding: 10px;
     cursor: pointer;
+    user-select: text;
 }
 
 #share-button:hover, #share-button:focus {

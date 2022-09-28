@@ -24,7 +24,7 @@ if (!serializedTracks) {
     fetchTracks(trackIds, createTrackElements);
 }
 
-// Attack event listeners for drag handling.
+// Attach event listeners for drag handling.
 var mouseDown = false;
 var didScroll = false;
 var startX, scrollLeft;
@@ -80,10 +80,10 @@ function shareButtonHandler() {
                                             shareButton.innerHTML = 'share my flow';
                                         }, 5000);
                                     }, () => {
-                                        shareButton.innerHTML = 'oops! couldn\'t copy url :(';
+                                        shareButton.innerHTML = short.short_url;
                                         setInterval(() => {
                                             shareButton.innerHTML = 'share my flow';
-                                        }, 5000);
+                                        }, 10000);
                                     });
                                 });
                             }
@@ -222,7 +222,9 @@ function createTrackElements(tracks) {
 
         // Close the track when not hovered.
         trackElem.onmouseleave = (event) => {
-            trackElem.style.flex = '0 0 var(--initial-track-width)';
+            if (document.activeElement !== event.target) {
+                trackElem.style.flex = '0 0 var(--initial-track-width)';
+            }
         }
         trackElem.addEventListener('blur', (event) => {
             event.preventDefault();
