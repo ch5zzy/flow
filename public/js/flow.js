@@ -181,7 +181,7 @@ function createTrackElements(tracks) {
         trackElem.setAttribute('tabindex', 0);
 
         let trackVis;
-        let mouseEnter;
+        let expandTrack;
         if (canvasUrl) {
             // Canvas is available, so track art will be a video.
             trackVis = document.createElement('video');
@@ -192,7 +192,7 @@ function createTrackElements(tracks) {
             trackVis.playsInline = true;
             trackVis.setAttribute('tabindex', -1);
 
-            mouseEnter = () => {
+            expandTrack = () => {
                 const aspect = trackVis.videoWidth / trackVis.videoHeight;
                 const newWidth = window.innerHeight * aspect;
                 trackElem.style.flex = '0 0 ' + newWidth + 'px';
@@ -204,28 +204,27 @@ function createTrackElements(tracks) {
             trackVis.draggable = false;
             trackVis.setAttribute('tabindex', -1);
 
-            mouseEnter = () => {
+            expandTrack = () => {
                 const aspect = trackVis.naturalWidth / trackVis.naturalHeight;
                 const newWidth = window.innerHeight * aspect;
                 trackElem.style.flex = '0 0 ' + newWidth + 'px';
-            }
+            };
         }
 
         // Expand the track when hovered.
-        trackElem.onmouseenter = (event) => {
-            mouseEnter();
-        }
+        trackElem.onmouseenter = expandTrack;
         trackElem.addEventListener('focus', (event) => {
             event.preventDefault();
             trackElem.onmouseenter(event);
         });
 
         // Close the track when not hovered.
-        trackElem.onmouseleave = (event) => {
+        let closeTrack = (event) => {
             if (document.activeElement !== event.target) {
                 trackElem.style.flex = '0 0 var(--initial-track-width)';
             }
-        }
+        };
+        trackElem.onmouseleave = closeTrack;
         trackElem.addEventListener('blur', (event) => {
             event.preventDefault();
             trackElem.onmouseleave(event);
@@ -237,6 +236,8 @@ function createTrackElements(tracks) {
                 audio.pause();
                 audio.src = track.preview_url;
                 audio.play();
+                // Close track when sample finishes.
+                audio.onended = closeTrack; 
             }
         };
         trackElem.addEventListener('keypress', (event) => {
