@@ -3,8 +3,12 @@ import Cookie from './cookie.js';
 const appUrl = window.location.origin;
 const baseUrl = window.location.origin + window.location.pathname;
 
+var style = getComputedStyle(document.body);
+
 // Create the track list and audio object.
 var tracksList = document.querySelector("#track-container");
+const trackPeekScale = 3;
+const trackPeekWidth = parseInt(style.getPropertyValue('--initial-track-width')) * trackPeekScale;
 var audio = new Audio();
 
 // Attach click handler to share button.
@@ -177,11 +181,14 @@ function createTrackElements(tracks) {
         // Create a container for holding the track art.
         const trackElem = document.createElement('div');
         trackElem.classList.add('track');
-        trackElem.setAttribute('aria-label', `"${track.name}" by ${track.artists.join(', ')}`);
+        const trackAnnotation = `${track.name} - ${track.artists.join(', ')}`;
+        trackElem.setAttribute('aria-label', trackAnnotation);
+        trackElem.setAttribute('title', trackAnnotation);
         trackElem.setAttribute('tabindex', 0);
 
         let trackVis;
         let expandTrack;
+        trackElem.isFullyExpanded = false;
         if (canvasUrl) {
             // Canvas is available, so track art will be a video.
             trackVis = document.createElement('video');
@@ -192,10 +199,11 @@ function createTrackElements(tracks) {
             trackVis.playsInline = true;
             trackVis.setAttribute('tabindex', -1);
 
-            expandTrack = () => {
+            expandTrack = (peek=false) => {
                 const aspect = trackVis.videoWidth / trackVis.videoHeight;
-                const newWidth = window.innerHeight * aspect;
+                const newWidth = peek ? trackPeekWidth : window.innerHeight * aspect;
                 trackElem.style.flex = '0 0 ' + newWidth + 'px';
+                trackElem.isFullyExpanded = !peek;
             };
         } else {
             // No canvas, so track art will be an image.
@@ -204,24 +212,32 @@ function createTrackElements(tracks) {
             trackVis.draggable = false;
             trackVis.setAttribute('tabindex', -1);
 
-            expandTrack = () => {
+            expandTrack = (peek=false) => {
                 const aspect = trackVis.naturalWidth / trackVis.naturalHeight;
-                const newWidth = window.innerHeight * aspect;
+                const newWidth = peek ? trackPeekWidth : window.innerHeight * aspect;
                 trackElem.style.flex = '0 0 ' + newWidth + 'px';
+                trackElem.isFullyExpanded = !peek;
             };
         }
 
         // Expand the track when hovered.
-        trackElem.onmouseenter = expandTrack;
+        trackElem.onmouseenter = (event) => {
+            if (!trackElem.isFullyExpanded) {
+                expandTrack(true);
+            }
+        }
         trackElem.addEventListener('focus', (event) => {
             event.preventDefault();
             trackElem.onmouseenter(event);
         });
 
         // Close the track when not hovered.
-        let closeTrack = (event) => {
-            if (document.activeElement !== event.target) {
+        let closeTrack = (event, force=false) => {
+            if (document.activeElement !== event.target && (!trackElem.isFullyExpanded || force)) {
                 trackElem.style.flex = '0 0 var(--initial-track-width)';
+                if (force) {
+                    trackElem.isFullyExpanded = false;
+                }
             }
         };
         trackElem.onmouseleave = closeTrack;
@@ -230,14 +246,18 @@ function createTrackElements(tracks) {
             trackElem.onmouseleave(event);
         });
 
-        // Play the track sample when clicked.
+        // Expand the track and play the track sample when clicked.
         trackElem.onclick = (event) => {
             if (!didScroll) {
+                expandTrack();
                 audio.pause();
                 audio.src = track.preview_url;
                 audio.play();
-                // Close track when sample finishes.
-                audio.onended = closeTrack; 
+                // Close track when sample finishes or another track is selected.
+                audio.onended = () => {
+                    closeTrack(event, true);
+                };
+                audio.pause = audio.onended;
             }
         };
         trackElem.addEventListener('keypress', (event) => {
