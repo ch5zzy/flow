@@ -19,6 +19,7 @@ shareButton.onclick = shareButtonHandler;
 var refreshToken = Cookie.get('refresh_token');
 var trackIds;
 var serializedTracks;
+var progressBarTimer;
 checkTokens();
 
 // Fetch the user's recent tracks.
@@ -178,7 +179,7 @@ function createTrackElements(tracks) {
         const canvasUrl = track.canvas_url;
         const trackArt = track.art;
 
-        // Create a container for holding the track art.
+        // Create a container for holding the track art and progress bar.
         const trackElem = document.createElement('div');
         trackElem.classList.add('track');
         const trackAnnotation = `${track.name} - ${track.artists.join(', ')}`;
@@ -186,6 +187,14 @@ function createTrackElements(tracks) {
         trackElem.setAttribute('title', trackAnnotation);
         trackElem.setAttribute('tabindex', 0);
 
+        // Create the track's progress bar.
+        const trackProgressBarContainer = document.createElement('div');
+        trackProgressBarContainer.classList.add('progress-bar-container');
+        const trackProgressBar = document.createElement('div');
+        trackProgressBar.classList.add('progress-bar');
+        trackProgressBarContainer.append(trackProgressBar);
+
+        // Create the track's visualizer.
         let trackVis;
         let expandTrack;
         trackElem.isFullyExpanded = false;
@@ -204,6 +213,10 @@ function createTrackElements(tracks) {
                 const newWidth = peek ? trackPeekWidth : window.innerHeight * aspect;
                 trackElem.style.flex = '0 0 ' + newWidth + 'px';
                 trackElem.isFullyExpanded = !peek;
+
+                if (!peek) {
+                    trackProgressBarContainer.style.visibility = 'visible';
+                }
             };
         } else {
             // No canvas, so track art will be an image.
@@ -217,6 +230,10 @@ function createTrackElements(tracks) {
                 const newWidth = peek ? trackPeekWidth : window.innerHeight * aspect;
                 trackElem.style.flex = '0 0 ' + newWidth + 'px';
                 trackElem.isFullyExpanded = !peek;
+
+                if (!peek) {
+                    trackProgressBarContainer.style.visibility = 'visible';
+                }
             };
         }
 
@@ -233,9 +250,13 @@ function createTrackElements(tracks) {
 
         // Close the track when not hovered.
         let closeTrack = (event, force=false) => {
-            if (document.activeElement !== event.target && (!trackElem.isFullyExpanded || force)) {
-                trackElem.style.flex = '0 0 var(--initial-track-width)';
-                if (force) {
+            if ((document.activeElement !== event.target && !trackElem.isFullyExpanded) || force) {
+                trackProgressBarContainer.style.visibility = 'hidden';
+
+                if (document.activeElement === event.target) {
+                    expandTrack(true);
+                } else {
+                    trackElem.style.flex = '0 0 var(--initial-track-width)';
                     trackElem.isFullyExpanded = false;
                 }
             }
@@ -250,14 +271,23 @@ function createTrackElements(tracks) {
         trackElem.onclick = (event) => {
             if (!didScroll) {
                 expandTrack();
+
                 audio.pause();
                 audio.src = track.preview_url;
+                clearInterval(progressBarTimer);
+                trackProgressBar.style.width = '0';
                 audio.play();
+
                 // Close track when sample finishes or another track is selected.
                 audio.onended = () => {
                     closeTrack(event, true);
                 };
                 audio.pause = audio.onended;
+
+                // Update the progress bar.
+                progressBarTimer = setInterval(() => {
+                    trackProgressBar.style.width = (audio.currentTime / audio.duration) * 100 + '%';
+                }, 30);
             }
         };
         trackElem.addEventListener('keypress', (event) => {
@@ -267,7 +297,11 @@ function createTrackElements(tracks) {
             }
         });
 
+        // Add the visualizer and progress bar to the track.
         trackElem.append(trackVis);
+        trackElem.append(trackProgressBarContainer);
+
+        // Add the track to the list of tracks.
         tracksList.append(trackElem);
     }
 }
