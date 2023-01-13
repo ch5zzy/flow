@@ -206,6 +206,9 @@ function createTrackElements(tracks) {
             trackVis.muted = true;
             trackVis.loop = true;
             trackVis.playsInline = true;
+            trackVis.onloadeddata = () => {
+                trackVis.style.opacity = '1';
+            };
             trackVis.setAttribute('tabindex', -1);
 
             expandTrack = (peek=false) => {
@@ -223,6 +226,9 @@ function createTrackElements(tracks) {
             trackVis = document.createElement('img');
             trackVis.src = trackArt;
             trackVis.draggable = false;
+            trackVis.onload = () => {
+                trackVis.style.opacity = '1';
+            };
             trackVis.setAttribute('tabindex', -1);
 
             expandTrack = (peek=false) => {
@@ -270,13 +276,13 @@ function createTrackElements(tracks) {
         // Expand the track and play the track sample when clicked.
         trackElem.onclick = (event) => {
             if (!didScroll) {
-                expandTrack();
-
                 audio.pause();
                 audio.src = track.preview_url;
                 clearInterval(progressBarTimer);
                 trackProgressBar.style.width = '0';
                 audio.play();
+
+                expandTrack();
 
                 // Close track when sample finishes or another track is selected.
                 audio.onended = () => {
