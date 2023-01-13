@@ -5,6 +5,9 @@ import uniqid from 'uniqid';
 import path from 'path';
 import tinyUrl from 'tinyurl';
 import getCanvases from './api/canvas/canvases.js';
+import * as dotenv from 'dotenv';
+
+dotenv.config();
 
 var clientId = process.env.SPOTIFY_CLIENT_ID;
 var clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
